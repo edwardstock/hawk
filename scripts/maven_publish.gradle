@@ -173,7 +173,7 @@ afterEvaluate {
         publications {
             android.libraryVariants.each { var ->
                 var.outputs.all { output ->
-                    println "Build Variant: ${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}\n" +
+                    println "Build Variant: ${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}${project.name.capitalize()}\n" +
                             "Task Suffix: "+"${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}${project.name.capitalize()}"
                     "${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}${project.name.capitalize()}"(MavenPublication) {
                         groupId releaseGroup
@@ -259,11 +259,11 @@ ext {
 if (bt_user != null && bt_key != null && flavorName != "") {
 
     println "Bintray upload: available; user: ${bt_user}"
-    println "Publication:   ${flavorName}${releaseArtifactId.capitalize()}"
+    println "Publication:   ${flavorName}${project.name.capitalize()}"
     bintray {
         user = bt_user
         key = bt_key
-        publications = ["${flavorName}${releaseArtifactId.capitalize()}"]
+        publications = ["${flavorName}${project.name.capitalize()}"]
         pkg {
             repo = localProps['bintray_repo']
             name = releaseArtifactId
