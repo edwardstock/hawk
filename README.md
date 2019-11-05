@@ -1,4 +1,4 @@
-[![API](https://img.shields.io/badge/API-16%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=16)
+[![API](https://img.shields.io/badge/API-16%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=16)   [ ![Download](https://api.bintray.com/packages/edwardstock/android/hawk/images/download.svg) ](https://bintray.com/edwardstock/android/hawk/)
 
 <img align='right' src='https://github.com/edwardstock/hawk/blob/master/art/hawk-logo.png' width='128' height='128'/>
 
