@@ -1,0 +1,98 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
+
+println project.name
+
+version = "3.0.0"
+group = "com.edwardstock.android"
+
+ext {
+    buildArtifactName = "hawk"
+    buildArtifactVersion = version
+    buildArtifactGroup = group
+
+    pomName = "hawk"
+    pomUrl = "https://github.com/edwardstock/hawk"
+    pomScm = {
+        connection = "scm:git:git://github.com/edwardstock/hawk.git"
+        url = pomUrl
+    }
+    pomInceptionYear = "2019"
+    pomContributors = {}
+    pomDescription = "Secure, simple key-value storage for android"
+    pomDevelopers = {
+        developer {
+            id = "nr4bt"
+            name = "Orhan Obut"
+            roles = ["creator"]
+        }
+        developer {
+            id = "edwardstock"
+            name = "Eduard Maximovich"
+            email = "edwatd.vstock@gmail.com"
+            roles = ["forker"]
+            timezone = "Europe/Moscow"
+        }
+    }
+    pomLicenses = {
+        license {
+            name = "The Apache Software License, Version 2.0"
+            url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution = "repo"
+        }
+    }
+}
+
+android {
+    compileSdkVersion maxSdk
+    buildToolsVersion buildToolsVers
+
+    defaultConfig {
+        minSdkVersion minSdk
+        targetSdkVersion maxSdk
+        consumerProguardFiles 'proguard-rules.pro'
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionCode 1
+        versionName version
+    }
+
+    buildTypes {
+        debug {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    lintOptions {
+        textReport true
+        textOutput 'stdout'
+    }
+}
+
+dependencies {
+    api 'com.facebook.conceal:conceal:2.0.1@aar'
+    api 'com.google.code.gson:gson:2.8.6'
+
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'com.google.truth:truth:0.28'
+    testImplementation 'org.robolectric:robolectric:3.8'
+    testImplementation 'org.mockito:mockito-core:2.23.4'
+    testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+
+    androidTestImplementation 'junit:junit:4.12'
+    androidTestImplementation 'com.google.truth:truth:0.28'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
+    androidTestImplementation 'androidx.test:rules:1.2.0'
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
+
+}
+
+apply from: '../scripts/maven_publish.gradle'

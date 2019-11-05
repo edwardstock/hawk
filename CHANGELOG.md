@@ -1,5 +1,11 @@
 # CHANGELOG
 
+### 3.0.0
+ - API almost fully opened, no more package-private classes
+ - Ability to create multiple DBs simultaneously by tagging (see readme)
+ - Updated android libs
+ 
+
 ### 2.0.1
 - Conceal is updated, with the new version the size is way smaller
 

@@ -1,0 +1,290 @@
+/*
+ * Copyright (C) by MinterTeam. 2018
+ * @link <a href="https://github.com/MinterTeam">Org Github</a>
+ * @link <a href="https://github.com/edwardstock">Maintainer Github</a>
+ *
+ * The MIT License
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+// DEFS
+
+Properties localProps = new Properties()
+localProps.load(project.rootProject.file('gradle.properties').newDataInputStream())
+
+task printFlavors {
+    String[] flavors = new String[android.productFlavors.size() * 2]
+
+    int s = 0
+    for (flavor in android.productFlavors) {
+        flavors[s++] = flavor.name + "Debug"
+        flavors[s++] = flavor.name + "Release"
+    }
+
+    for (fname in flavors) {
+        println fname
+    }
+}
+
+
+def hasArgument(String arg) {
+    return hasProperty(arg) && !getProperty(arg).isEmpty()
+}
+
+ext.getArgumentOrDefault = { String arg, defValue ->
+    if (!hasProperty(arg)) {
+        return defValue
+    }
+
+    return getProperty(arg)
+}
+
+def getArgOrDefInternal(String arg, defVal) {
+    if (!hasProperty(arg)) {
+        return defVal
+    }
+
+    return getProperty(arg)
+}
+
+def pomDescription = getArgumentOrDefault("pomDescription", null)
+
+group = getProperty("group")
+version = android.defaultConfig.versionName
+def releaseGroup = this.group
+def releaseVersion = this.version
+def releaseArtifactId = project.name
+def flavorName = ""
+def buildPomLicenses = getArgOrDefInternal("pomLicenses", {})
+def buildPomDevelopers = getArgOrDefInternal("pomDevelopers", {})
+def buildPomScm = getArgOrDefInternal("pomScm", {})
+def buildPomContributors = getArgOrDefInternal("pomContributors", {})
+
+if (hasArgument("buildArtifactName")) {
+    releaseArtifactId = getProperty("buildArtifactName")
+}
+
+if (hasArgument("buildArtifactGroup")) {
+    releaseGroup = getProperty("buildArtifactGroup")
+}
+
+if (hasArgument("buildArtifactVersion")) {
+    releaseVersion = getProperty("buildArtifactVersion")
+}
+
+if (hasProperty("artifactSuffix") && !getProperty("artifactSuffix").isEmpty()) {
+    releaseArtifactId += "-" + getProperty("artifactSuffix")
+}
+
+if (hasProperty("buildFlavor") && !getProperty("buildFlavor").isEmpty()) {
+    flavorName = getProperty("buildFlavor")
+}
+
+println "Artifact {" +
+        "\n\tid: ${releaseArtifactId}," +
+        "\n\tgroup: ${releaseGroup}," +
+        "\n\tversion: ${releaseVersion}" +
+        "\n\troot project name: ${rootProject.name}" +
+        "\n\tproject name: ${project.name}" +
+        "\n\timplementation example: implementation '${releaseGroup}:${releaseArtifactId}:${releaseVersion}'" +
+        "\n}"
+
+// rename output lib file to artifactName with aar extension
+afterEvaluate {
+    android.libraryVariants.all { variant ->
+        variant.outputs.all { output ->
+            // getting output File
+            def libFile = output.getOutputFile()
+            // create task name, example: assembleDebug, or assembleMyFlavorRelease
+            def taskName = "assemble"
+            def taskFlavor = ""
+            if(variant.flavorName != "") {
+                taskFlavor = variant.flavorName.capitalize()
+            }
+            taskName += taskFlavor
+            taskName += variant.buildType.name.capitalize()
+
+            // Workaround - only this feature able us to set output file name as we wish,
+            // VariantLibraryOutputImpl have method setOutputFileName(String) but it's not working on gradle 5
+            // https://github.com/gradle/gradle/issues/8328#issuecomment-466136196
+            tasks.named(taskName).configure {
+                doLast {
+                    def fname = ""
+                    if(variant.flavorName != "") {
+                        fname = "${variant.flavorName}-"
+                    }
+
+                    //finally, file will have name like: mylibrary-myflavor-debug.aar
+                    libFile.renameTo("${libFile.parent}/${releaseArtifactId}-${fname}${variant.buildType.name}.aar")
+                }
+            }
+        }
+    }
+}
+
+
+// TASKS
+tasks.withType(Jar) {
+    from(project.projectDir) {
+        include 'LICENSE'
+        into 'META-INF'
+    }
+}
+
+task androidJavadoc(type: Javadoc) {
+    failOnError false
+    source = android.sourceSets.main.java.sourceFiles
+    println android.sourceSets.main.java.sourceFiles
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    classpath += configurations.compile
+}
+
+// build a jar with javadoc
+task androidJavadocJar(type: Jar, dependsOn: androidJavadoc) {
+    getArchiveClassifier().set('javadoc')
+    from androidJavadoc.destinationDir
+}
+
+task androidSourcesJar(type: Jar) {
+    getArchiveClassifier().set('sources')
+    from android.sourceSets.main.java.source
+}
+
+
+afterEvaluate {
+    publishing {
+        publications {
+            android.libraryVariants.each { var ->
+                var.outputs.all { output ->
+                    println "Build Variant: ${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}\n" +
+                            "Task Suffix: "+"${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}${project.name.capitalize()}"
+                    "${var.flavorName}${var.flavorName != "" ? var.buildType.name.capitalize() : var.buildType.name}${project.name.capitalize()}"(MavenPublication) {
+                        groupId releaseGroup
+                        artifactId releaseArtifactId
+                        version releaseVersion
+
+                        def libFile = output.outputFile
+                        def fname = ""
+                        if(var.flavorName != "") {
+                            fname = "${var.flavorName}-"
+                        }
+
+                        // Tell maven to prepare the generated "*.aar" file for publishing
+                        def outFile = "${libFile.parent}/${releaseArtifactId}-${fname}${var.buildType.name}.aar"
+                        println "Output File: ${outFile}"
+                        artifact(outFile)
+                        artifact androidSourcesJar
+                        artifact androidJavadocJar
+
+                        pom {
+                            name = getArgumentOrDefault("pomName", getArgumentOrDefault('buildArtifactName', ""))
+                            url = getArgumentOrDefault("pomUrl", null)
+                            //noinspection UnnecessaryQualifiedReference
+                            inceptionYear = getArgumentOrDefault("pomInceptionYear", String.valueOf(Calendar.instance.get(Calendar.YEAR)))
+                            description = pomDescription
+                            licenses buildPomLicenses
+                            developers buildPomDevelopers
+                            scm buildPomScm
+                            contributors buildPomContributors
+                        }
+
+                        pom.withXml {
+                            def deps = asNode().appendNode("dependencies")
+                            def depsVariantsSrc = ["implementation", "api", "compile"]
+
+                            List<String> depsVariantsTarget = new ArrayList<>()
+                            for (String depVar : depsVariantsSrc) {
+                                depsVariantsTarget.add(depVar)
+                                if (var.flavorName != "") {
+                                    depsVariantsTarget.add(var.flavorName + depVar.capitalize())
+                                }
+                            }
+
+                            def allDeps = []
+
+                            depsVariantsTarget.each {depType ->
+                                // Iterate over the implementation dependencies (we don't want the test ones), adding a <dependency> node for each
+                                configurations."${depType}".allDependencies.each { dep ->
+                                    // Ensure dependencies such as fileTree are not included in the pom.
+                                    if (dep.name != 'unspecified') {
+                                        def fullName = "${dep.group}:${dep.name}:${dep.version}"
+                                        // don't duplicate deps in POM
+                                        if(!allDeps.contains(fullName)) {
+                                            allDeps.add(fullName)
+                                            println "${depType}:  ${dep.group}:${dep.name}:${dep.version}\n"
+                                            def dependencyNode = deps.appendNode('dependency')
+                                            dependencyNode.appendNode('groupId', dep.group)
+                                            dependencyNode.appendNode('artifactId', dep.name)
+                                            dependencyNode.appendNode('version', dep.version)
+                                            dep.artifacts.each { art ->
+                                                if(!art.type.isEmpty()) {
+                                                    dependencyNode.appendNode('type', art.type)
+                                                }
+                                            }
+                                        }
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+ext {
+    bt_user = localProps.get('bintray_user', getProperty('bintray_user'))
+    bt_key = localProps.get('bintray_key', getProperty('bintray_key'))
+}
+
+if (bt_user != null && bt_key != null && flavorName != "") {
+
+    println "Bintray upload: available; user: ${bt_user}"
+    println "Publication:   ${flavorName}${releaseArtifactId.capitalize()}"
+    bintray {
+        user = bt_user
+        key = bt_key
+        publications = ["${flavorName}${releaseArtifactId.capitalize()}"]
+        pkg {
+            repo = localProps['bintray_repo']
+            name = releaseArtifactId
+            userOrg = localProps['bintray_user_org']
+            licenses = [localProps['bintray_license_name']]
+            githubRepo = localProps["bintray_gh_repo"]
+            vcsUrl = "${localProps['bintray_gh_repo']}.git"
+            issueTrackerUrl = "${localProps['bintray_gh_repo']}/issues"
+            websiteUrl = localProps['bintray_website']
+
+            version {
+                name = releaseVersion
+                desc = pomDescription
+                released = new Date()
+                vcsTag = releaseVersion
+
+            }
+        }
+    }
+
+
+} else {
+    println "Bintray upload: unavailable"
+}
